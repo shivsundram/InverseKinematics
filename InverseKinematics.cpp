@@ -72,18 +72,7 @@ Vector3d rotateZ(const Vector3d& p, double theta) {
 
 
 Vector3d translate(const Vector3d& p, const Vector3d& to) {
-    Matrix4d t;
-    t <<
-        0, 0, 0, -to[0],
-        0, 0, 0, -to[1],
-        0, 0, 0, -to[2],
-        0, 0, 0, 1;
-
-    Vector4d pAffine(p[0], p[1], p[2], 1);
-
-    Vector4d result = t * pAffine;
-
-    return Vector3d(result[0], result[1], result[2]);
+    return p - to;
 }
 
 
