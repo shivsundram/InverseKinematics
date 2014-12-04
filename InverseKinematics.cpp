@@ -39,39 +39,6 @@ using namespace Eigen;
 const double THETA_CHANGE = 0.001;
 
 
-class Viewport {
-public:
-    int w, h; // width and height
-};
-
-
-class Joint {
-public:
-    double length;
-    Vector3d theta;
-    Matrix3d rotationMatrix;
-    Vector3d basePoint, endPoint;
-}
-
-
-
-class System {
-private:
-    vector<Joint> joints;
-public:
-
-    System(vector<Joint> inJoints, Vector3d inBasePoint, Vector3d inEndPoint);
-    MatrixXd getJacobian();
-
-}
-
-
-System::System(vector<Joint> inJoints, Vector3d inBasePoint, Vector3d inEndPoint) {
-    joints = inJoints;
-    basePoint = inBasePoint;
-    endPoint = inEndPoint;
-}
-
 
 Vector3d rotateX(const Vector3d& p, double theta) {
     Matrix3d rotateX;
@@ -107,16 +74,71 @@ Vector3d rotateZ(const Vector3d& p, double theta) {
 Vector3d translate(const Vector3d& p, const Vector3d& to) {
     Matrix4d t;
     t <<
-        0, 0, 0, -to[0]
-        0, 0, 0, -to[1]
-        0, 0, 0, -to[2]
+        0, 0, 0, -to[0],
+        0, 0, 0, -to[1],
+        0, 0, 0, -to[2],
         0, 0, 0, 1;
 
     Vector4d pAffine(p[0], p[1], p[2], 1);
 
     Vector4d result = t * pAffine;
 
-    return Vector3d(new[0], new[1], new[2]);
+    return Vector3d(result[0], result[1], result[2]);
+}
+
+
+
+class Viewport {
+public:
+    int w, h; // width and height
+};
+
+
+class Joint {
+public:
+    double length;
+    Vector3d theta;
+    Vector3d basePoint, endPoint;
+
+    void update(Vector3d dtheta, Vector3d newBasePoint);
+
+    Joint(Vector3d inBasePoint, double inLength);
+};
+
+
+Joint::Joint(Vector3d inBasePoint, double inLength) {
+    length = inLength;
+    theta = Vector3d(0.0, 0.0, 0.0);
+    basePoint = inBasePoint;
+    endPoint = basePoint + Vector3d(0.0, length, 0.0);
+}
+
+void Joint::update(Vector3d dtheta, Vector3d newBasePoint) {
+    basePoint = newBasePoint;
+
+    Vector3d translated = translate(endPoint, newBasePoint);
+
+    Vector3d newEndPoint = rotateZ(rotateY(rotateX(translated, dtheta[0]), dtheta[1]), dtheta[2]);
+    endPoint = translate(newEndPoint, -newBasePoint);
+}
+
+
+
+class System {
+private:
+    vector<Joint> joints;
+    MatrixXd getJacobian();
+    void updateJoints(const VectorXd& dtheta);
+public:
+
+    System(vector<Joint> inJoints);
+    bool update(Vector3d g);
+
+};
+
+
+System::System(vector<Joint> inJoints) {
+    joints = inJoints;
 }
 
 
@@ -163,23 +185,34 @@ MatrixXd System::getJacobian() {
 }
 
 
+void System::updateJoints(const VectorXd& dtheta) {
 
-// bool update(Vector3f g) {
-//     g_sys = g - system.basepoint
-//     if I cant reach the goal:
-//         g = new goal that can be reached
-//     dp = g - system.endpoint
-//     if dp.norm() > eps:
-//         MatrixXd J = system.getJacobian();
+    Vector3d newBasePoint = joints[0].basePoint;
+    Vector3d currDTheta(0.0, 0.0, 0.0);
+    for(int i = 0; i < joints.size(); i++) {
+        currDTheta = Vector3d(dtheta[3*i], dtheta[3*i+1], dtheta[3*i+2]);
+        joints[i].update(currDTheta, newBasePoint);
+        newBasePoint = joints[i].endPoint;
+    }
+}
 
-//         VectorXd dtheta = J.jacobiSvd().solve(dp);
 
-//         system.updateAngles(dtheta)
-//         system.updateEndpoint
-//         return false
+bool System::update(Vector3d g) {
+    Vector3d gSys = g - joints[0].basePoint;
+    // if I cant reach the goal:
+    //     g = new goal that can be reached
+    Vector3d dp = g - joints[joints.size() - 1].endPoint;
+    if (dp.norm() > 0.0001) {
+        MatrixXd J = getJacobian();
 
-//     return true
-// }
+        VectorXd dtheta = J.jacobiSvd().solve(dp);
+
+        updateJoints(dtheta);
+        return true;
+    }
+
+    return false;
+}
 
 
 
