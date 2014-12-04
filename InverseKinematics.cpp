@@ -36,11 +36,151 @@ using namespace std;
 using namespace Eigen;
 
 
+const double THETA_CHANGE = 0.001;
+
 
 class Viewport {
 public:
     int w, h; // width and height
 };
+
+
+class Joint {
+public:
+    double length;
+    Vector3d theta;
+    Matrix3d rotationMatrix;
+    Vector3d basePoint, endPoint;
+}
+
+
+
+class System {
+private:
+    vector<Joint> joints;
+public:
+
+    System(vector<Joint> inJoints, Vector3d inBasePoint, Vector3d inEndPoint);
+    MatrixXd getJacobian();
+
+}
+
+
+System::System(vector<Joint> inJoints, Vector3d inBasePoint, Vector3d inEndPoint) {
+    joints = inJoints;
+    basePoint = inBasePoint;
+    endPoint = inEndPoint;
+}
+
+
+Vector3d rotateX(const Vector3d& p, double theta) {
+    Matrix3d rotateX;
+    rotateX <<
+        1, 0, 0,
+        0, cos(theta), -sin(theta),
+        0, sin(theta), sin(theta);
+
+    return rotateX * p;
+}
+
+Vector3d rotateY(const Vector3d& p, double theta) {
+    Matrix3d rotateY;
+    rotateY <<
+        cos(theta), 0, sin(theta),
+        0, 1, 0,
+        -sin(theta), 0, cos(theta);
+
+    return rotateY * p;
+}
+
+Vector3d rotateZ(const Vector3d& p, double theta) {
+    Matrix3d rotateZ;
+    rotateZ <<
+        cos(theta), -sin(theta), 0,
+        sin(theta), sin(theta), 0,
+        0, 0, 1;
+
+    return rotateZ * p;
+}
+
+
+Vector3d translate(const Vector3d& p, const Vector3d& to) {
+    Matrix4d t;
+    t <<
+        0, 0, 0, -to[0]
+        0, 0, 0, -to[1]
+        0, 0, 0, -to[2]
+        0, 0, 0, 1;
+
+    Vector4d pAffine(p[0], p[1], p[2], 1);
+
+    Vector4d result = t * pAffine;
+
+    return Vector3d(new[0], new[1], new[2]);
+}
+
+
+MatrixXd System::getJacobian() {
+    MatrixXd result;
+
+    Vector3d deltaTheta(1, 1, 1);
+    deltaTheta *= THETA_CHANGE;
+
+    for (int i = 0; i < joints.size(); i++) {
+        Vector3d newTheta = joints[i].theta + deltaTheta;
+
+        Vector3d original = translate(joints[i].endPoint, joints[i].basePoint);
+
+        Vector3d p = rotateX(original, joints[i].theta[0]);
+        Vector3d newP = rotateX(original, newTheta[0]);
+
+        Vector3d col1 = (p - newP) / THETA_CHANGE;
+
+        result(i * 3, 0) = col1[0];
+        result(i * 3, 1) = col1[1];
+        result(i * 3, 2) = col1[2];
+
+        p = rotateY(original, joints[i].theta[1]);
+        newP = rotateY(original, newTheta[1]);
+
+        Vector3d col2 = (p - newP) / THETA_CHANGE;
+
+        result(i * 3 + 1, 0) = col2[0];
+        result(i * 3 + 1, 1) = col2[1];
+        result(i * 3 + 1, 2) = col2[2];
+
+        p = rotateZ(original, joints[i].theta[2]);
+        newP = rotateZ(original, newTheta[2]);
+
+        Vector3d col3 = (p - newP) / THETA_CHANGE;
+
+        result(i * 3 + 2, 0) = col3[0];
+        result(i * 3 + 2, 1) = col3[1];
+        result(i * 3 + 2, 2) = col3[2];
+    }
+
+    return result;
+}
+
+
+
+bool update(Vector3f g) {
+    g_sys = g - system.basepoint
+    if I cant reach the goal:
+        g = new goal that can be reached
+    dp = g - system.endpoint
+    if dp.norm() > eps:
+        J = system.getJ()
+        svd(J)
+        dtheta = svd.solve(dp)
+
+        system.updateAngles(dtheta)
+        system.updateEndpoint
+        return false
+
+    return true
+}
+
 
 
 Viewport viewport;
@@ -88,8 +228,6 @@ void display() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 
-
-
     glFlush();
     glutSwapBuffers();
 }
@@ -107,7 +245,6 @@ void myFrameMove() {
 
 
 int main(int argc, char *argv[]) {
-
 
     glutInit(&argc, argv);
 
@@ -128,7 +265,7 @@ int main(int argc, char *argv[]) {
 
     glEnable(GL_DEPTH_TEST);
 
-    glutDisplayFunc(display);                  // function to run when its time to draw something
+    glutDisplayFunc(display);                    // function to run when its time to draw something
     glutReshapeFunc(myReshape);                  // function to run when the window gets resized
     glutIdleFunc(myFrameMove);                   // function to run when not handling any other task
     glutMainLoop();                              // infinite loop that will keep drawing and resizing and whatever else
