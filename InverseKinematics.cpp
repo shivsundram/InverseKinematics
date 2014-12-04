@@ -164,22 +164,22 @@ MatrixXd System::getJacobian() {
 
 
 
-bool update(Vector3f g) {
-    g_sys = g - system.basepoint
-    if I cant reach the goal:
-        g = new goal that can be reached
-    dp = g - system.endpoint
-    if dp.norm() > eps:
-        J = system.getJ()
-        svd(J)
-        dtheta = svd.solve(dp)
+// bool update(Vector3f g) {
+//     g_sys = g - system.basepoint
+//     if I cant reach the goal:
+//         g = new goal that can be reached
+//     dp = g - system.endpoint
+//     if dp.norm() > eps:
+//         MatrixXd J = system.getJacobian();
 
-        system.updateAngles(dtheta)
-        system.updateEndpoint
-        return false
+//         VectorXd dtheta = J.jacobiSvd().solve(dp);
 
-    return true
-}
+//         system.updateAngles(dtheta)
+//         system.updateEndpoint
+//         return false
+
+//     return true
+// }
 
 
 
