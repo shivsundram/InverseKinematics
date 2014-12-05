@@ -39,7 +39,6 @@ using namespace Eigen;
 const double THETA_CHANGE = 0.001;
 
 
-
 Vector3d rotateX(const Vector3d& p, double theta) {
     Matrix3d rotateX;
     rotateX <<
@@ -90,6 +89,7 @@ public:
     Vector3d basePoint, endPoint;
 
     void update(Vector3d dtheta, Vector3d newBasePoint);
+    void render();
 
     Joint(Vector3d inBasePoint, double inLength);
 };
@@ -111,6 +111,13 @@ void Joint::update(Vector3d dtheta, Vector3d newBasePoint) {
     endPoint = translate(newEndPoint, -newBasePoint);
 }
 
+void Joint::render() {
+    glBegin(GL_LINES);
+        glVertex3d(basePoint[0], basePoint[1], basePoint[2]);
+        glVertex3d(endPoint[0], endPoint[1], endPoint[2]);
+    glEnd();
+}
+
 
 
 class System {
@@ -122,6 +129,7 @@ public:
 
     System(vector<Joint> inJoints);
     bool update(Vector3d g);
+    void render();
 
 };
 
@@ -132,7 +140,7 @@ System::System(vector<Joint> inJoints) {
 
 
 MatrixXd System::getJacobian() {
-    MatrixXd result;
+    MatrixXd result(3, 3 * joints.size());
 
     Vector3d deltaTheta(1, 1, 1);
     deltaTheta *= THETA_CHANGE;
@@ -179,7 +187,7 @@ void System::updateJoints(const VectorXd& dtheta) {
     Vector3d newBasePoint = joints[0].basePoint;
     Vector3d currDTheta(0.0, 0.0, 0.0);
     for(int i = 0; i < joints.size(); i++) {
-        currDTheta = Vector3d(dtheta[3*i], dtheta[3*i+1], dtheta[3*i+2]);
+        currDTheta = Vector3d(dtheta(0, 3*i), dtheta(0, 3*i+1), dtheta(0, 3*i+2));
         joints[i].update(currDTheta, newBasePoint);
         newBasePoint = joints[i].endPoint;
     }
@@ -204,8 +212,17 @@ bool System::update(Vector3d g) {
 }
 
 
+void System::render() {
+    for(int i = 0; i < joints.size(); i++) {
+        joints[i].render();
+    }
+}
+
+
 
 Viewport viewport;
+vector<Joint> bones;
+System arm(bones);
 
 
 void myReshape(int w, int h) {
@@ -232,6 +249,13 @@ void myReshape(int w, int h) {
 void initScene(){
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
 
+
+    bones.push_back(Joint(Vector3d(0.0, 0.0, 0.0), 1.0));
+    bones.push_back(Joint(bones[0].endPoint, 1.0));
+    bones.push_back(Joint(bones[1].endPoint, 1.0));
+
+    arm = System(bones);
+
     myReshape(viewport.w, viewport.h);
 }
 
@@ -249,6 +273,8 @@ void display() {
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+    arm.update(Vector3d(2.0, 2.0, 2.0));
+    arm.render();
 
     glFlush();
     glutSwapBuffers();
