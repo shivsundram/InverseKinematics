@@ -443,7 +443,7 @@ void display() {
 
 	glMatrixMode(GL_MODELVIEW);
 	//glLoadIdentity();
-	//glRotated(.4, 0, 1, 0);
+	glRotated(.4, 0, 1, 0);
 
 	glShadeModel(GL_FLAT);
 
@@ -465,13 +465,15 @@ void display() {
 	glBegin(GL_LINE_STRIP);
 	while (j < 7.0){
 
-		glVertex3d(.8 + .4*cos(j),   .4*sin(2 * j), -1.5);
-		glVertex3d(.8 + .4*cos(j + .01),  .4*sin(2 * j + .01), -1.5);
-
+		//glVertex3d(.8 + .4*cos(j),   .4*sin(2 * j), -1.5);
+		//glVertex3d(.8 + .4*cos(j + .01),  .4*sin(2 * j + .01), -1.5);
+		glVertex3d(.7 + .48*pow(sin(j), 3), 1.0 + .39*cos(j) - 0.15 * cos(j * 2) - 0.06 * cos(j * 3) - 0.03 * cos(j * 4), -1.0);
+		//Vector3d goal1(.7 + .48*pow(sin(j+.01), 3), 1.0 + .39*cos(j+.01) - 0.15 * cos((j+.01) * 2) - 0.06 * cos((j+.01) * 3) - 0.03 * cos((j+.01) * 4), -1.0);
 		j = j + .01;
 	}
 	glEnd();
-	Vector3d goal1(.8 + .4*cos(.001*t2), .4*sin(.001*2*t2), -1.5);
+	Vector3d goal1(.7 + .48*pow(sin(.001*t2), 3), 1.0 + .39*cos(.001*t2) - 0.15 * cos(.001*t2 * 2) - 0.06 * cos(.001*t2 * 3) - 0.03 * cos(.001 * t2 * 4), -1.0);
+	//Vector3d goal1(.8 + .4*cos(.001*t2), .4*sin(.001*2*t2), -1.5);
 	arm.update(goal1);
 	arm.render();
 
